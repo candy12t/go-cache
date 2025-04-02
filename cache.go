@@ -5,23 +5,23 @@ import (
 	"time"
 )
 
-type CacheItem struct {
-	value  any
+type CacheItem[T any] struct {
+	value  *T
 	expiry time.Time
 }
 
-type Cache struct {
+type Cache[K comparable, T any] struct {
 	mu   sync.RWMutex
-	data map[string]CacheItem
+	data map[K]CacheItem[T]
 }
 
-func NewCache() *Cache {
-	return &Cache{
-		data: make(map[string]CacheItem),
+func NewCache[K comparable, T any]() *Cache[K, T] {
+	return &Cache[K, T]{
+		data: make(map[K]CacheItem[T]),
 	}
 }
 
-func (c *Cache) Set(key string, value any, ttl time.Duration) {
+func (c *Cache[K, T]) Set(key K, value *T, ttl time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -32,13 +32,13 @@ func (c *Cache) Set(key string, value any, ttl time.Duration) {
 		expiry = time.Time{}
 	}
 
-	c.data[key] = CacheItem{
+	c.data[key] = CacheItem[T]{
 		value:  value,
 		expiry: expiry,
 	}
 }
 
-func (c *Cache) Get(key string) (any, bool) {
+func (c *Cache[K, T]) Get(key K) (*T, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -55,16 +55,16 @@ func (c *Cache) Get(key string) (any, bool) {
 	return item.value, ok
 }
 
-func (c *Cache) Delete(key string) {
+func (c *Cache[K, T]) Delete(key K) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	delete(c.data, key)
 }
 
-func (c *Cache) Flush() {
+func (c *Cache[K, T]) Flush() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.data = make(map[string]CacheItem)
+	c.data = map[K]CacheItem[T]{}
 }
